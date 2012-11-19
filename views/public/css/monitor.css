@@ -1,0 +1,85 @@
+body {
+	padding-top: 60px;
+}
+
+table.stat-group {
+	font-family: monospace;
+	font-size: 85%;
+}
+
+table.stat-group th {
+	text-align: center;
+}
+
+canvas {
+	padding: 0;
+	margin: 0;
+}
+
+td.name {
+	width: 290px;
+}
+td.name span {
+	display: block;
+	float: left;
+}
+td.name span.host {
+	width: 180px;
+}
+td.name span.address {
+	width: 110px;
+}
+
+td.cpu, td.memory {
+	padding: 5px 5px 0 5px;
+	width: 100px;
+}
+td.load {
+	padding: 5px 5px 0 5px;
+	width: 50px;
+}
+
+td.load {
+	width: 50px;
+	text-align: right;
+}
+
+td.disk {
+	width: 100px;
+}
+
+td.disk span {
+	display: block;
+	float: left;
+	text-align: right;
+	width: 50px;
+}
+td.disk span.read {
+	color: #009;
+}
+td.disk span.write {
+	color: #900;
+}	
+
+td.network {
+	width: 200px;
+}
+
+td.network span {
+	display: block;
+	float: left;
+	text-align: right;
+	width: 50px;
+}
+td.network span.recv {
+	color: #069;
+}
+td.network span.send {
+	color: #960;
+}
+td.network span.active {
+	color: #096;
+}
+td.network span.timewait {
+	color: #666;
+}

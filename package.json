@@ -1,0 +1,14 @@
+{
+	"name": "proteus-monitor-server",
+	"version": "0.0.1",
+	"private": true,
+	"scripts": {
+		"start": "node server"
+	},
+	"dependencies": {
+		"express": "*",
+		"jade": "*",
+		"commander": "*",
+		"ws": "*"
+	}
+}
