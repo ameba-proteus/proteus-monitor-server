@@ -85,7 +85,11 @@ function getHost(name) {
 }
 
 function numformat(value) {
-	return Math.round(value*10)/10;
+	if (value < 100) {
+		return Math.round(value*10)/10;
+	} else {
+		return Math.round(value);
+	}
 }
 
 function byteformat(value) {
@@ -407,8 +411,15 @@ Category.prototype = {
 				data.cpu.iowait += dstat.cpu.iowait;
 			}
 			if (dstat.load) {
-				data.load['1m'] += dstat.load['1m'];
+				var load1m = Number(dstat.load['1m']);
+				if (load1m > 0) {
+					data.load['1m'] += load1m;
+				}
 				data.load.core += dstat.load.core;
+			}
+			if (dstat.disk) {
+				data.disk.read += dstat.disk.read;
+				data.disk.write += dstat.disk.write;
 			}
 			if (dstat.memory) {
 				data.memory.used += dstat.memory.used;
@@ -438,7 +449,8 @@ Category.prototype = {
 		data.cpu.system = data.cpu.system ? Math.round(data.cpu.system / hostlen) : 0;
 		data.cpu.iowait = data.cpu.iowait ? Math.round(data.cpu.iowait / hostlen) : 0;
 		data.cpu.idle = (100 - data.cpu.user - data.cpu.system - data.cpu.iowait);
-		data.load['1m'] = data.load['1m'] ? Math.round(data.load['1m'] / hostlen * 100) / 100 : 0;
+		data.load['1m'] = (Math.round(data.load['1m']*10)/10);
+		//data.load['1m'] = data.load['1m'] ? Math.round(data.load['1m'] / hostlen * 100) / 100 : 0;
 
 		// update stat
 		this.total.update(data);
