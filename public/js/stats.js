@@ -17,7 +17,13 @@ var socket = new monitor.MonitorSocket();
 socket.register({
 	dstat: {
 		hosts: function(data) {
+			var cnames = [];
 			for (var cname in data) {
+				cnames.push(cname);
+			}
+			cnames.sort();
+			for (var k = 0; k < cnames.length; k++) {
+				var cname = cnames[k];
 				var cdata = data[cname];
 				var category = categories[cname];
 				if (category == null) {
