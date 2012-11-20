@@ -273,7 +273,7 @@ Host.prototype = {
 					color: color.rgb.warn,
 					value: data.memory.used
 				}],
-				label: byteformat(data.memory.free)
+				label: byteformat(data.memory.used)
 			});
 		}
 		
@@ -379,8 +379,9 @@ function Category(name) {
 	var tbody = this.tbody = $.tag('tbody');
 
 	this.total = new Host({name:'Total'});
+	this.max = new Host({name:'Max'});
 
-	thead.append(this.total.tr);
+	thead.append(this.total.tr).append(this.max.tr);
 	table.append(thead);
 	table.append(tbody);
 	tbody.hide();
@@ -391,11 +392,21 @@ Category.prototype = {
 		var tds = self.tds;
 		var hosts = self.hosts;
 		var data = {
-			name: 'Total',
+			name: 'Total/Average',
 			address: hosts.length,
 	 		cpu: { idle: 0, user: 0, system: 0,  iowait: 0},
 			load: { "1m": 0, core: 0 },
 			disk: { write: 0, read: 0 },
+			memory: { used: 0, free: 0, cache: 0, buff: 0 },
+			net: { recv: 0, send: 0 },
+			tcp: { active: 0, timewait: 0 }
+		};
+		var max = {
+			name: 'Max',
+			address: '',
+			cpu: { idle:100, user:0, system:0, iowait: 0 },
+			load: { "1m" : 0, core : 0, rate: 0 },
+			disk: { write: 0, read : 0 },
 			memory: { used: 0, free: 0, cache: 0, buff: 0 },
 			net: { recv: 0, send: 0 },
 			tcp: { active: 0, timewait: 0 }
@@ -409,31 +420,59 @@ Category.prototype = {
 				data.cpu.user += dstat.cpu.user;
 				data.cpu.system += dstat.cpu.system;
 				data.cpu.iowait += dstat.cpu.iowait;
+				if (max.cpu.idle > dstat.cpu.idle) {
+					max.cpu = dstat.cpu;
+				}
 			}
 			if (dstat.load) {
 				var load1m = Number(dstat.load['1m']);
 				if (load1m > 0) {
 					data.load['1m'] += load1m;
+					dstat.load.rate = load1m / dstat.load.core;
+					if (max.load.rate < dstat.load.rate) {
+						max.load = dstat.load;
+					}
 				}
 				data.load.core += dstat.load.core;
 			}
 			if (dstat.disk) {
 				data.disk.read += dstat.disk.read;
 				data.disk.write += dstat.disk.write;
+				if (max.disk.read < dstat.disk.read) {
+					max.disk.read = dstat.disk.read;
+				}
+				if (max.disk.write < dstat.disk.write) {
+					max.disk.write = dstat.disk.write;
+				}
 			}
 			if (dstat.memory) {
 				data.memory.used += dstat.memory.used;
 				data.memory.cache += dstat.memory.cache;
 				data.memory.buff += dstat.memory.buff;
 				data.memory.free += dstat.memory.free;
+				if (dstat.memory.used > max.memory.used) {
+					max.memory = dstat.memory;
+				}
 			}
 			if (dstat.net) {
 				data.net.recv += dstat.net.recv;
 				data.net.send += dstat.net.send;
+				if (dstat.net.recv > max.net.recv) {
+					max.net.recv = dstat.net.recv;
+				}
+				if (dstat.net.send > max.net.send) {
+					max.net.send = dstat.net.send;
+				}
 			}
 			if (dstat.tcp) {
 				data.tcp.active += dstat.tcp.active;
 				data.tcp.timewait += dstat.tcp.timewait;
+				if (dstat.tcp.active > max.tcp.active) {
+					max.tcp.active = dstat.tcp.active;
+				}
+				if (dstat.tcp.timewait > max.tcp.timewait) {
+					max.tcp.timewait = dstat.tcp.timewait;
+				}
 			}
 			var ps = hosts[i].ps;
 			for (var name in ps) {
@@ -454,6 +493,7 @@ Category.prototype = {
 
 		// update stat
 		this.total.update(data);
+		this.max.update(max);
 		// get ps
 		for (var name in allps) {
 			if (allps[name] > 0) {
