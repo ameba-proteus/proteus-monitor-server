@@ -17,7 +17,6 @@ var socket = new monitor.MonitorSocket();
 socket.register({
 	dstat: {
 		hosts: function(data) {
-			console.log('updating hosts', data);
 			for (var cname in data) {
 				var cdata = data[cname];
 				var category = categories[cname];
@@ -28,8 +27,16 @@ socket.register({
 					.append(category.header)
 					.append(category.table);
 				}
+				var list = [];
 				for (var hname in cdata) {
-					var hdata = cdata[hname];
+					var host = cdata[hname];
+					list.push(host);
+				}
+				list.sort(function(a,b) {
+					return (a.name > b.name) ? 1 : (a.name < b.name) ? -1 : 0;
+				});
+				for (var i = 0; i < list.length; i++) {
+					var hdata = list[i];
 					var host = hosts[hdata.name];
 					if (!host) {
 						host = new Host(hdata, category);
@@ -39,15 +46,6 @@ socket.register({
 					// add host line to category table
 					category.tbody.append(host.tr);
 				}
-				category.hosts.sort(function(a,b) {
-					if (a.name > b.name) {
-						return 1;
-					} else if (a.name < b.name) {
-						return -1;
-					} else {
-						return 0;
-					}
-				});
 				category.update();
 			}
 			// hosts
