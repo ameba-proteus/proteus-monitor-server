@@ -94,7 +94,6 @@ var color = {};
 	MonitorSocket.prototype.subscribe = function() {
 		for (var i = 0; i < arguments.length; i++) {
 			var name = arguments[i];
-			console.log('subscribing', name);
 			this.send('common','subscribe', { name: name });
 		}
 	};

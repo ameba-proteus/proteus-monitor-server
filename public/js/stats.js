@@ -17,8 +17,13 @@ var socket = new monitor.MonitorSocket();
 socket.register({
 	common: {
 		hosts: function(data) {
-			console.log('updating hosts', data);
+			var cnames = [];
 			for (var cname in data) {
+				cnames.push(cname);
+			}
+			cnames.sort();
+			for (var k = 0; k < cnames.length; k++) {
+				var cname = cnames[k];
 				var cdata = data[cname];
 				var category = categories[cname];
 				if (category == null) {
@@ -28,8 +33,16 @@ socket.register({
 					.append(category.header)
 					.append(category.table);
 				}
+				var list = [];
 				for (var hname in cdata) {
-					var hdata = cdata[hname];
+					var host = cdata[hname];
+					list.push(host);
+				}
+				list.sort(function(a,b) {
+					return (a.name > b.name) ? 1 : (a.name < b.name) ? -1 : 0;
+				});
+				for (var i = 0; i < list.length; i++) {
+					var hdata = list[i];
 					var host = hosts[hdata.name];
 					if (!host) {
 						host = new Host(hdata, category);
@@ -39,15 +52,6 @@ socket.register({
 					// add host line to category table
 					category.tbody.append(host.tr);
 				}
-				category.hosts.sort(function(a,b) {
-					if (a.name > b.name) {
-						return 1;
-					} else if (a.name < b.name) {
-						return -1;
-					} else {
-						return 0;
-					}
-				});
 				category.update();
 			}
 			// hosts
@@ -83,7 +87,11 @@ function getHost(name) {
 }
 
 function numformat(value) {
-	return Math.round(value*10)/10;
+	if (value < 100) {
+		return Math.round(value*10)/10;
+	} else {
+		return Math.round(value);
+	}
 }
 
 function byteformat(value) {
@@ -370,8 +378,9 @@ function Category(name) {
 	var tbody = this.tbody = $.tag('tbody');
 
 	this.total = new Host({name:'Total'});
+	this.max = new Host({name:'Max'});
 
-	thead.append(this.total.tr);
+	thead.append(this.total.tr).append(this.max.tr);
 	table.append(thead);
 	table.append(tbody);
 	tbody.hide();
@@ -382,7 +391,7 @@ Category.prototype = {
 		var tds = self.tds;
 		var hosts = self.hosts;
 		var data = {
-			name: 'Total',
+			name: 'Total/Average',
 			address: hosts.length,
 	 		stat: {
 				cpu: {
@@ -393,6 +402,29 @@ Category.prototype = {
 				process: { running: 0, blocked: 0 }
 			},
 			load: [0],
+			disk: {
+				total: {
+					write: { count: 0 },
+					read: { count: 0 }
+				}
+			},
+			mem: { used: 0, free: 0, cached: 0, buffer: 0, total: 0 },
+			net: {
+			   total: { receive: 0, send: 0 }
+			}
+		};
+		var max = {
+			name: 'Max',
+	 		stat: {
+				cpu: {
+					total: { idle: 0, user: 0, system: 0, iowait: 0 },
+					core: 0
+				},
+				system: { interrupt: 0, contextsw: 0 },
+				process: { running: 0, blocked: 0 }
+			},
+			load: [0],
+			loadrate: 0,
 			disk: {
 				total: {
 					write: { count: 0 },
@@ -420,24 +452,46 @@ Category.prototype = {
 				data.stat.cpu.total.system += stat.stat.cpu.total.system;
 				data.stat.cpu.total.iowait += stat.stat.cpu.total.iowait;
 				data.stat.cpu.total.idle += stat.stat.cpu.total.idle;
+				if (max.stat.cpu.idle > stat.stat.cpu.idle) {
+					max.stat.cpu = stat.stat.cpu;
+				}
 			}
 			if (stat.load) {
 				data.load[0] += stat.load[0];
-				data.core += stat.core;
+				data.loadrate = stat.load[0] / stat.stat.cpu.core;
+				if (max.loadrate < data.loadrate) {
+					max.load = data.load;
+				}
 			}
 			if (stat.mem) {
 				data.mem.cached += stat.mem.cached;
 				data.mem.buffer += stat.mem.buffer;
 				data.mem.free += stat.mem.free;
 				data.mem.total += stat.mem.total;
+				stat.mem.used = stat.mem.total - stat.mem.free - stat.mem.buffer - stat.mem.cached;
+				if (max.mem.used < stat.mem.used) {
+					max.mem = stat.mem;
+				}
 			}
 			if (stat.net) {
 				data.net.total.receive += stat.net.total.receive;
 				data.net.total.send += stat.net.total.send;
+				if (max.net.total.receive < stat.net.total.receive) {
+					max.net.total.receive = stat.net.total.receive;
+				}
+				if (max.net.total.send < stat.net.total.send) {
+					max.net.total.send = stat.net.total.send;
+				}
 			}
 			if (stat.disk) {
 				data.disk.total.read.count += stat.disk.total.read.count;
 				data.disk.total.write.count += stat.disk.total.write.count;
+				if (max.disk.total.read.count < stat.disk.total.read.count) {
+					max.disk.total.read.count = stat.disk.total.read.count;
+				}
+				if (max.disk.total.write.count < stat.disk.total.write.count) {
+					max.disk.total.write.count = stat.disk.total.write.count;
+				}
 			}
 			var ps = hosts[i].ps;
 			for (var name in ps) {
@@ -458,6 +512,7 @@ Category.prototype = {
 
 		// update stat
 		this.total.update(data);
+		this.max.update(max);
 		// get ps
 		for (var name in allps) {
 			if (allps[name] > 0) {

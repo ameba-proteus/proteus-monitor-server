@@ -55,15 +55,15 @@ td.load {
 	text-align: right;
 }
 
-td.disk {
-	width: 80px;
+td.disk, td.network {
+	width: 90px;
 }
 
-td.disk span {
+td.disk span, td.network span {
 	display: block;
 	float: left;
 	text-align: right;
-	width: 40px;
+	width: 42px;
 }
 td.disk span.read {
 	color: #009;
@@ -72,27 +72,11 @@ td.disk span.write {
 	color: #900;
 }	
 
-td.network {
-	width: 160px;
-}
-
-td.network span {
-	display: block;
-	float: left;
-	text-align: right;
-	width: 40px;
-}
 td.network span.recv {
 	color: #069;
 }
 td.network span.send {
 	color: #960;
-}
-td.network span.active {
-	color: #096;
-}
-td.network span.timewait {
-	color: #666;
 }
 
 td.process span {
