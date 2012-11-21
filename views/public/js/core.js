@@ -57,7 +57,8 @@ var monitor = {};
 			ws.send('watcher');
 			// get hosts
 			setTimeout(function() {
-				parent.send('dstat', 'hosts');
+				console.log('hohohoho');
+				parent.send('common', 'hosts');
 			}, 0);
 		};
 		ws.onmessage = function(message) {

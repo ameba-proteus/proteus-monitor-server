@@ -58,7 +58,7 @@ var color = {};
 			ws.send('watcher');
 			// get hosts
 			setTimeout(function() {
-				parent.send('dstat', 'hosts');
+				parent.send('common', 'hosts');
 			}, 0);
 		};
 		ws.onmessage = function(message) {

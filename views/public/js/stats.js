@@ -15,9 +15,9 @@ setInterval(function() {
 
 var socket = new monitor.MonitorSocket();
 socket.register({
-	dstat: {
+	common: {
 		hosts: function(data) {
-			console.log('updating hosts', data);
+			console.log(data);
 			for (var cname in data) {
 				var cdata = data[cname];
 				var category = categories[cname];
@@ -52,12 +52,14 @@ socket.register({
 			}
 			// hosts
 			// subscribing dstat updates
-			this.subscribe('dstat');
-		},
+			this.subscribe('stat');
+		}
+	},
+	stat: {
 		update: function(data) {
 			var host = hosts[data.name];
 			if (host) {
-				host.update(data.data);
+				//host.update(data.data);
 			}
 		}
 	}

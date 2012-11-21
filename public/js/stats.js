@@ -15,7 +15,7 @@ setInterval(function() {
 
 var socket = new monitor.MonitorSocket();
 socket.register({
-	dstat: {
+	common: {
 		hosts: function(data) {
 			console.log('updating hosts', data);
 			for (var cname in data) {
@@ -33,7 +33,7 @@ socket.register({
 					var host = hosts[hdata.name];
 					if (!host) {
 						host = new Host(hdata, category);
-						hosts[hdata.name] = host;
+						hosts[hname] = host;
 						category.hosts.push(host);
 					}
 					// add host line to category table
@@ -52,8 +52,10 @@ socket.register({
 			}
 			// hosts
 			// subscribing dstat updates
-			this.subscribe('dstat', 'ps');
-		},
+			this.subscribe('stat', 'ps');
+		}
+	},
+	stat: {
 		update: function(data) {
 			var host = hosts[data.name];
 			if (host) {
@@ -182,9 +184,8 @@ function Host(data, category) {
 	)
 	.append(tds.process)
 	;
-
-	if (data.dstat) {
-		this.update(data.dstat);
+	if (data.stat) {
+		this.update(data.stat);
 	}
 }
 
@@ -195,7 +196,7 @@ Host.prototype = {
 		var tds = self.tds;
 		var spans = self.spans;
 		var bars = self.bars;
-		self.dstat = data;
+		self.stat = data;
 		
 		// Name
 		if (data.name) {
@@ -207,28 +208,30 @@ Host.prototype = {
 		}
 
 		// CPU
-		if (data.cpu) {
+		if (data.stat && data.stat.cpu) {
+			var cpu = data.stat.cpu.total;
 			bars.cpu.update({
 				series: [{
 					color: color.rgb.normal,
-					value: data.cpu.idle
+					value: cpu.idle
 				},{
 					color: color.rgb.warn,
-					value: data.cpu.user
+					value: cpu.user
 				},{
 					color: color.rgb.notice,
-					value: data.cpu.system
+					value: cpu.system
 				},{
 					color: color.rgb.fatal,
-					value: data.cpu.iowait
+					value: cpu.iowait
 				}],
-				label: (100-data.cpu.idle) + '%'
+				label: (100-cpu.idle) + '%'
 			});
 		}
 		
 		// Load
 		if (data.load) {
-			var load = data.load['1m'];
+			var load = data.load[0];
+			load = Math.round(load*100)/100;
 			var corecount = data.load.core;
 			var loadrate = Math.min(50, Math.round(load / corecount * 50));
 			bars.load.update({
@@ -245,39 +248,35 @@ Host.prototype = {
 		
 		// Disk
 		if (data.disk) {
-			spans.disk.write.text(byteformat(data.disk.write));
-			spans.disk.read.text(byteformat(data.disk.read));
+			spans.disk.write.text(byteformat(data.disk.total.read.count));
+			spans.disk.read.text(byteformat(data.disk.total.write.count));
 		}
 		
 		// Memory
-		if (data.memory) {
+		if (data.mem) {
+			data.mem.used = data.mem.total - data.mem.free - data.mem.cached - data.mem.buffer;
 			bars.memory.update({
 				series: [{
 					color: color.rgb.normal,
-					value: data.memory.free
+					value: data.mem.free
 				},{
 					color: color.rgb.safe,
-					value: data.memory.cache
+					value: data.mem.cached
 				},{
 					color: color.rgb.notice,
-					value: data.memory.buff
+					value: data.mem.buffer
 				},{
 					color: color.rgb.warn,
-					value: data.memory.used
+					value: data.mem.used
 				}],
-				label: byteformat(data.memory.free)
+				label: byteformat(data.mem.used*1024)
 			});
 		}
 		
 		// Network
 		if (data.net) {
-			spans.network.recv.text(byteformat(data.net.recv));
-			spans.network.send.text(byteformat(data.net.send));
-		}
-		// TCP
-		if (data.tcp) {
-			spans.network.active.text(kmgformat(data.tcp.active));
-			spans.network.timewait.text(kmgformat(data.tcp.timewait));
+			spans.network.recv.text(byteformat(data.net.total.receive));
+			spans.network.send.text(byteformat(data.net.total.send));
 		}
 	},
 	// process update
@@ -385,40 +384,60 @@ Category.prototype = {
 		var data = {
 			name: 'Total',
 			address: hosts.length,
-	 		cpu: { idle: 0, user: 0, system: 0,  iowait: 0},
-			load: { "1m": 0, core: 0 },
-			disk: { write: 0, read: 0 },
-			memory: { used: 0, free: 0, cache: 0, buff: 0 },
-			net: { recv: 0, send: 0 },
-			tcp: { active: 0, timewait: 0 }
+	 		stat: {
+				cpu: {
+					total: { idle: 0, user: 0, system: 0, iowait: 0 },
+					core: 0
+				},
+				system: { interrupt: 0, contextsw: 0 },
+				process: { running: 0, blocked: 0 }
+			},
+			load: [0],
+			disk: {
+				total: {
+					write: { count: 0 },
+					read: { count: 0 }
+				}
+			},
+			mem: { used: 0, free: 0, cached: 0, buffer: 0, total: 0 },
+			net: {
+			   total: { receive: 0, send: 0 }
+			}
 		};
 		var allps = {
 		};
 		var hostlen = hosts.length;
+		var hostcount = 0;
 		for (var i = 0; i < hostlen; i++) {
-			var dstat = hosts[i].dstat;
-			if (dstat.cpu) {
-				data.cpu.user += dstat.cpu.user;
-				data.cpu.system += dstat.cpu.system;
-				data.cpu.iowait += dstat.cpu.iowait;
+			var stat = hosts[i].stat;
+			if (!stat) {
+				continue;
 			}
-			if (dstat.load) {
-				data.load['1m'] += dstat.load['1m'];
-				data.load.core += dstat.load.core;
+			hostcount++;
+			if (stat.stat) {
+				data.stat.cpu.core += stat.stat.cpu.core;
+				data.stat.cpu.total.user   += stat.stat.cpu.total.user;
+				data.stat.cpu.total.system += stat.stat.cpu.total.system;
+				data.stat.cpu.total.iowait += stat.stat.cpu.total.iowait;
+				data.stat.cpu.total.idle += stat.stat.cpu.total.idle;
 			}
-			if (dstat.memory) {
-				data.memory.used += dstat.memory.used;
-				data.memory.cache += dstat.memory.cache;
-				data.memory.buff += dstat.memory.buff;
-				data.memory.free += dstat.memory.free;
+			if (stat.load) {
+				data.load[0] += stat.load[0];
+				data.core += stat.core;
 			}
-			if (dstat.net) {
-				data.net.recv += dstat.net.recv;
-				data.net.send += dstat.net.send;
+			if (stat.mem) {
+				data.mem.cached += stat.mem.cached;
+				data.mem.buffer += stat.mem.buffer;
+				data.mem.free += stat.mem.free;
+				data.mem.total += stat.mem.total;
 			}
-			if (dstat.tcp) {
-				data.tcp.active += dstat.tcp.active;
-				data.tcp.timewait += dstat.tcp.timewait;
+			if (stat.net) {
+				data.net.total.receive += stat.net.total.receive;
+				data.net.total.send += stat.net.total.send;
+			}
+			if (stat.disk) {
+				data.disk.total.read.count += stat.disk.total.read.count;
+				data.disk.total.write.count += stat.disk.total.write.count;
 			}
 			var ps = hosts[i].ps;
 			for (var name in ps) {
@@ -430,11 +449,12 @@ Category.prototype = {
 			}
 		}
 		// get average
-		data.cpu.user = data.cpu.user ? Math.round(data.cpu.user / hostlen) : 0;
-		data.cpu.system = data.cpu.system ? Math.round(data.cpu.system / hostlen) : 0;
-		data.cpu.iowait = data.cpu.iowait ? Math.round(data.cpu.iowait / hostlen) : 0;
-		data.cpu.idle = (100 - data.cpu.user - data.cpu.system - data.cpu.iowait);
-		data.load['1m'] = data.load['1m'] ? Math.round(data.load['1m'] / hostlen * 100) / 100 : 0;
+		var cpu = data.stat.cpu;
+		cpu.user = cpu.user ? Math.round(cpu.user / hostcount) : 0;
+		cpu.system = cpu.system ? Math.round(cpu.system / hostcount) : 0;
+		cpu.iowait = cpu.iowait ? Math.round(cpu.iowait / hostcount) : 0;
+		cpu.idle = (100 - cpu.user - cpu.system - cpu.iowait);
+		data.load[0] = data.load[0] ? Math.round(data.load[0] / hostcount * 100) / 100 : 0;
 
 		// update stat
 		this.total.update(data);
