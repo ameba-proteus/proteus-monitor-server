@@ -256,8 +256,8 @@ Host.prototype = {
 		
 		// Disk
 		if (data.disk) {
-			spans.disk.write.text(byteformat(data.disk.total.read.sector*512));
-			spans.disk.read.text(byteformat(data.disk.total.write.sector*512));
+			spans.disk.read.text(byteformat(data.disk.total.read.sector*512));
+			spans.disk.write.text(byteformat(data.disk.total.write.sector*512));
 		}
 		
 		// Memory
@@ -366,7 +366,7 @@ function Category(name) {
 		.tag('th')
 			.tag('span')
 				.text('Network')
-				.attr('title','receive/send/active/timeout')
+				.attr('title','Receive / Send')
 				.tooltip()
 			.gat()
 		.gat()
