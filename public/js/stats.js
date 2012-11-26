@@ -46,7 +46,7 @@ socket.register({
 					var host = hosts[hdata.name];
 					if (!host) {
 						host = new Host(hdata, category);
-						hosts[hname] = host;
+						hosts[hdata.name] = host;
 						category.hosts.push(host);
 					}
 					// add host line to category table
@@ -240,7 +240,7 @@ Host.prototype = {
 		if (data.load) {
 			var load = data.load[0];
 			load = Math.round(load*100)/100;
-			var corecount = data.load.core;
+			var corecount = data.stat.cpu.core;
 			var loadrate = Math.min(50, Math.round(load / corecount * 50));
 			bars.load.update({
 				series: [{
@@ -256,8 +256,8 @@ Host.prototype = {
 		
 		// Disk
 		if (data.disk) {
-			spans.disk.write.text(byteformat(data.disk.total.read.count));
-			spans.disk.read.text(byteformat(data.disk.total.write.count));
+			spans.disk.write.text(byteformat(data.disk.total.read.sector*512));
+			spans.disk.read.text(byteformat(data.disk.total.write.sector*512));
 		}
 		
 		// Memory
@@ -404,8 +404,8 @@ Category.prototype = {
 			load: [0],
 			disk: {
 				total: {
-					write: { count: 0 },
-					read: { count: 0 }
+					write: { sector: 0 },
+					read: { sector: 0 }
 				}
 			},
 			mem: { used: 0, free: 0, cached: 0, buffer: 0, total: 0 },
@@ -417,7 +417,7 @@ Category.prototype = {
 			name: 'Max',
 	 		stat: {
 				cpu: {
-					total: { idle: 0, user: 0, system: 0, iowait: 0 },
+					total: { idle: 100, user: 0, system: 0, iowait: 0 },
 					core: 0
 				},
 				system: { interrupt: 0, contextsw: 0 },
@@ -427,11 +427,11 @@ Category.prototype = {
 			loadrate: 0,
 			disk: {
 				total: {
-					write: { count: 0 },
-					read: { count: 0 }
+					write: { sector: 0 },
+					read: { sector: 0 }
 				}
 			},
-			mem: { used: 0, free: 0, cached: 0, buffer: 0, total: 0 },
+			mem: { used: 0, free: 0, cached: 0, buffer: 0, total: 0, rate: 0 },
 			net: {
 			   total: { receive: 0, send: 0 }
 			}
@@ -452,15 +452,16 @@ Category.prototype = {
 				data.stat.cpu.total.system += stat.stat.cpu.total.system;
 				data.stat.cpu.total.iowait += stat.stat.cpu.total.iowait;
 				data.stat.cpu.total.idle += stat.stat.cpu.total.idle;
-				if (max.stat.cpu.idle > stat.stat.cpu.idle) {
+				if (max.stat.cpu.total.idle > stat.stat.cpu.total.idle) {
 					max.stat.cpu = stat.stat.cpu;
 				}
 			}
 			if (stat.load) {
 				data.load[0] += stat.load[0];
-				data.loadrate = stat.load[0] / stat.stat.cpu.core;
-				if (max.loadrate < data.loadrate) {
-					max.load = data.load;
+				var loadrate = stat.load[0] / stat.stat.cpu.core;
+				if (max.loadrate < loadrate) {
+					max.load = stat.load;
+					max.loadrate = loadrate;
 				}
 			}
 			if (stat.mem) {
@@ -469,7 +470,8 @@ Category.prototype = {
 				data.mem.free += stat.mem.free;
 				data.mem.total += stat.mem.total;
 				stat.mem.used = stat.mem.total - stat.mem.free - stat.mem.buffer - stat.mem.cached;
-				if (max.mem.used < stat.mem.used) {
+				stat.mem.rate = stat.mem.used / stat.mem.total;
+				if (max.mem.rate < stat.mem.rate) {
 					max.mem = stat.mem;
 				}
 			}
@@ -484,13 +486,13 @@ Category.prototype = {
 				}
 			}
 			if (stat.disk) {
-				data.disk.total.read.count += stat.disk.total.read.count;
-				data.disk.total.write.count += stat.disk.total.write.count;
-				if (max.disk.total.read.count < stat.disk.total.read.count) {
-					max.disk.total.read.count = stat.disk.total.read.count;
+				data.disk.total.read.sector += stat.disk.total.read.sector;
+				data.disk.total.write.sector += stat.disk.total.write.sector;
+				if (max.disk.total.read.sector < stat.disk.total.read.sector) {
+					max.disk.total.read.sector = stat.disk.total.read.sector;
 				}
-				if (max.disk.total.write.count < stat.disk.total.write.count) {
-					max.disk.total.write.count = stat.disk.total.write.count;
+				if (max.disk.total.write.sector < stat.disk.total.write.sector) {
+					max.disk.total.write.sector = stat.disk.total.write.sector;
 				}
 			}
 			var ps = hosts[i].ps;
@@ -503,7 +505,7 @@ Category.prototype = {
 			}
 		}
 		// get average
-		var cpu = data.stat.cpu;
+		var cpu = data.stat.cpu.total;
 		cpu.user = cpu.user ? Math.round(cpu.user / hostcount) : 0;
 		cpu.system = cpu.system ? Math.round(cpu.system / hostcount) : 0;
 		cpu.iowait = cpu.iowait ? Math.round(cpu.iowait / hostcount) : 0;

@@ -63,7 +63,7 @@ td.disk span, td.network span {
 	display: block;
 	float: left;
 	text-align: right;
-	width: 42px;
+	width: 45px;
 }
 td.disk span.read {
 	color: #009;
