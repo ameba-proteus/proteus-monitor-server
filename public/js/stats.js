@@ -458,7 +458,7 @@ Category.prototype = {
 			}
 			if (stat.load) {
 				data.load[0] += stat.load[0];
-				var loadrate = stat.load[0] / stat.stat.cpu.core;
+				var loadrate = stat.load[0] === 0 ? 0 : (stat.load[0] / stat.stat.cpu.core);
 				if (max.loadrate < loadrate) {
 					max.load = stat.load;
 					max.loadrate = loadrate;
@@ -510,7 +510,7 @@ Category.prototype = {
 		cpu.system = cpu.system ? Math.round(cpu.system / hostcount) : 0;
 		cpu.iowait = cpu.iowait ? Math.round(cpu.iowait / hostcount) : 0;
 		cpu.idle = (100 - cpu.user - cpu.system - cpu.iowait);
-		data.load[0] = data.load[0] ? Math.round(data.load[0] / hostcount * 100) / 100 : 0;
+		//data.load[0] = data.load[0] ? Math.round(data.load[0] / hostcount * 100) / 100 : 0;
 
 		// update stat
 		this.total.update(data);
