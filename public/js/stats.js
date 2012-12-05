@@ -251,9 +251,9 @@ Host.prototype = {
 		if (data.load) {
 			var load = data.load[0];
 			load = Math.round(load*100)/100;
-			var loadrate = data.loadrate;
+			//var loadrate = data.loadrate;
 			var corecount = data.stat.cpu.core;
-			loadrate = Math.min(50, Math.round(loadrate * 50));
+			loadrate = Math.min(50, Math.round(load/corecount * 50));
 			bars.load.update({
 				series: [{
 					color: color.rgb.normal,
@@ -522,7 +522,7 @@ Category.prototype = {
 		cpu.system = cpu.system ? Math.round(cpu.system / hostcount) : 0;
 		cpu.iowait = cpu.iowait ? Math.round(cpu.iowait / hostcount) : 0;
 		cpu.idle = (100 - cpu.user - cpu.system - cpu.iowait);
-		data.load[0] = data.load[0] ? Math.round(data.load[0] / hostcount * 100) / 100 : 0;
+		//data.load[0] = data.load[0] ? Math.round(data.load[0] / hostcount * 100) / 100 : 0;
 
 		// update stat
 		this.total.update(data);
