@@ -522,7 +522,7 @@ Category.prototype = {
 		cpu.system = cpu.system ? Math.round(cpu.system / hostcount) : 0;
 		cpu.iowait = cpu.iowait ? Math.round(cpu.iowait / hostcount) : 0;
 		cpu.idle = (100 - cpu.user - cpu.system - cpu.iowait);
-		data.load[0] = data.load[0] ? Math.round(data.load[0] / hostcount * 100) / 100 : 0;
+		//data.load[0] = data.load[0] ? Math.round(data.load[0] / hostcount * 100) / 100 : 0;
 
 		// update stat
 		this.total.update(data);
