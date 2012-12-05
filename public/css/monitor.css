@@ -21,6 +21,14 @@ table.stat-group thead th.name {
 	text-align: left;
 }
 
+.modal-body {
+	max-height: 800px;
+}
+#modal {
+	width: 800px;
+	margin: -250px 0 0 -400px;
+}
+
 canvas {
 	padding: 0;
 	margin: 0;
@@ -131,7 +139,7 @@ div#host-detail section.load div.load-unit span {
 	height: 18px;
 }
 div#host-detail section table {
-	margin-bottom: 0;
+	margin-bottom: 5px;
 }
 div#host-detail section.net div.net-unit,
 div#host-detail section.disk div.disk-unit {
