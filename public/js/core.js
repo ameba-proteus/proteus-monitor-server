@@ -4,12 +4,20 @@
 (function($) {
 	
 	$.tag = function(name, attrs) {
-		var classes = null;
+		var id;
+		if (name.indexOf('#') >= 0) {
+			id = name.substring(name.indexOf('#')+1);
+			name = name.substring(0, name.indexOf('#'));
+		}
+		var classes;
 		if (name.indexOf('.') >= 0) {
 			classes = name.substring(name.indexOf('.')+1).split('.');
 			name = name.substring(0, name.indexOf('.'));
 		}
 		var element = $(document.createElement(name));
+		if (id) {
+			element.attr('id',id);
+		}
 		if (classes) {
 			element.addClass(classes.join(' '));
 		}
@@ -130,7 +138,8 @@ var color = {};
 		var canvas = this.canvas = document.createElement('canvas');
 		canvas.width = width;
 		canvas.height= height;
-		this.context = canvas.getContext('2d');
+		var context = this.context = canvas.getContext('2d');
+		context.lineWidth = 10;
 	}
 	Pie.prototype = {
 		update: function(data) {
@@ -138,15 +147,36 @@ var color = {};
 			var context = this.context;
 			var canvas = this.canvas;
 			context.clearRect(0,0,canvas.width,canvas.height);
-			for (name in data) {
-				unit = data[name];
+			var series = data.series;
+			var i;
+			for (i = 0; i < series.length; i++) {
+				unit = series[i];
 				total += unit.value;
 			}
-			var start, end;
-			for (name in data) {
-				unit = data[name];
-				end = unit.value / total * Math.PI*2;
-				context.fillStyle = unit.color;
+			var radius = Math.floor(Math.min(canvas.width, canvas.height) / 2);
+			var x = radius;
+			var y = x;
+			var start = -Math.PI / 2, end = -Math.PI / 2;
+			var sum = 0;
+			var series = data.series;
+			for (i = 0; i < series.length; i++) {
+				unit = series[i];
+				sum += unit.value;
+				end = sum / total * Math.PI * 2 - Math.PI / 2;
+				context.beginPath();
+				context.strokeStyle = unit.color;
+				context.arc(x, y, radius - 5, start, end);
+				context.stroke();
+				start = end;
+			}
+			if (data.label) {
+				var len = context.measureText(data.label);
+				context.fillStyle = '#000';
+				context.fillText(
+					data.label,
+					canvas.width/2-len.width/2+4,
+					canvas.height-12
+				);
 			}
 			return this;
 		}
@@ -191,9 +221,15 @@ var color = {};
 		}
 	}
 
+	function Circle(width,height,option) {
+	}
+	Circle.prototype = {
+	};
+
 	monitor.charts = {
 		Pie: Pie,
-		Bar: Bar
+		Bar: Bar,
+		Circle: Circle
 	};
 })(monitor);
 

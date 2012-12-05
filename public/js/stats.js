@@ -4,6 +4,7 @@ $(function() {
 
 var categories = {};
 var hosts = {};
+var detail = null;
 
 $('#nav-stats').addClass('active');
 
@@ -64,6 +65,9 @@ socket.register({
 			var host = hosts[data.name];
 			if (host) {
 				host.update(data.data);
+			}
+			if (detail && detail.host === host) {
+				detail.update(data.data);
 			}
 		}
 	},
@@ -153,7 +157,7 @@ function Host(data, category) {
 	};
 	var spans = this.spans = {
 		name: {
-			host: $.tag('span.host').text(data.name),
+			host: data.summary ? $.tag('span.host').text(data.name) : $.tag('span.host').tag('a').text(data.name).gat(),
 			address: $.tag('span.address').text(data.address ? data.address : '')
 		},
 		disk: {
@@ -192,8 +196,15 @@ function Host(data, category) {
 	)
 	.append(tds.process)
 	;
+	var self = this;
 	if (data.stat) {
-		this.update(data.stat);
+		self.update(data.stat);
+	}
+	if (!data.summary) {
+		spans.name.host.click(function() {
+			detail = new HostDetail(self);
+			detail.show();
+		});
 	}
 }
 
@@ -240,8 +251,9 @@ Host.prototype = {
 		if (data.load) {
 			var load = data.load[0];
 			load = Math.round(load*100)/100;
+			var loadrate = data.loadrate;
 			var corecount = data.stat.cpu.core;
-			var loadrate = Math.min(50, Math.round(load / corecount * 50));
+			loadrate = Math.min(50, Math.round(loadrate * 50));
 			bars.load.update({
 				series: [{
 					color: color.rgb.normal,
@@ -377,8 +389,8 @@ function Category(name) {
 	;
 	var tbody = this.tbody = $.tag('tbody');
 
-	this.total = new Host({name:'Total'});
-	this.max = new Host({name:'Max'});
+	this.total = new Host({name:'Total',summary:true});
+	this.max = new Host({name:'Max',summary:true});
 
 	thead.append(this.total.tr).append(this.max.tr);
 	table.append(thead);
@@ -458,10 +470,10 @@ Category.prototype = {
 			}
 			if (stat.load) {
 				data.load[0] += stat.load[0];
-				var loadrate = stat.load[0] / stat.stat.cpu.core;
-				if (max.loadrate < loadrate) {
+				stat.loadrate = stat.load[0] / stat.stat.cpu.core;
+				if (max.loadrate < stat.loadrate) {
 					max.load = stat.load;
-					max.loadrate = loadrate;
+					max.loadrate = stat.loadrate;
 				}
 			}
 			if (stat.mem) {
@@ -536,6 +548,163 @@ function labelTooltip(series) {
 	}
 	return html;
 }
+
+function HostDetail(host) {
+	var self = this;
+	self.host = host;
+	var page = self.page = $.tag('div#host-detail');
+	var stat = host.stat;
+
+	self.cpu  = $.tag('section.cpu')
+	.tag('h5').text('CPU').gat();
+	self.cpus = [];
+
+	var core = stat.stat.cpu.core;
+	for (var i = 0; i < core; i++) {
+		var elem = $.tag('div.cpu-unit');
+		var pie = new monitor.charts.Pie(32,32);
+		self.cpus.push(pie);
+		self.cpu.append(elem
+						.tag('span').text(i).gat()
+						.append(pie.canvas));
+	}
+
+	self.load = $.tag('section.load')
+	.tag('h5').text('Load').gat();
+	self.loads = [];
+	var loadlabels = ['1m','5m','15m'];
+	for (i = 0; i < 3; i++) {
+		var elem = $.tag('div.load-unit');
+		var bar = new monitor.charts.Bar(100,18);
+		self.loads.push(bar);
+		self.load.append(elem
+						 .tag('span').text(loadlabels[i]).gat()
+						 .append(bar.canvas));
+	}
+
+	self.disk = $.tag('section.disk')
+	.tag('h5').text('Disk').gat();
+	self.disks = {};
+
+	for (var name in stat.disk) {
+		if (name === 'total') continue;
+		var disk = stat.disk[name];
+		var elem = $.tag('div.disk-unit');
+		elem
+		.tag('table.table.table-bordered')
+		.tag('tr').tag('th').text(name).gat().gat()
+		.tag('tr').tag('td').text('').gat().gat()
+		.gat();
+		self.disk.append(elem);
+		self.disks[name] = elem.find('td');
+	}
+
+	self.net  = $.tag('section.net')
+	.tag('h5').text('Network').gat();
+	self.nets = {};
+
+	for (var name in stat.net) {
+		if (name === 'total') continue;
+		var net = stat.net[name];
+		var elem = $.tag('div.net-unit');
+		elem
+		.tag('table.table.table-bordered')
+		.tag('tr').tag('th').text(name).gat().gat()
+		.tag('tr').tag('td').text('').gat().gat()
+		.gat();
+		self.net.append(elem);
+		self.nets[name] = elem.find('td');
+	}
+
+	page
+	.tag('div.modal-header').tag('h3').text(host.name + ' - ' + host.address).gat().gat()
+	.tag('div.modal-body')
+		.append(self.cpu)
+		.tag('div.clearfix').gat()
+		.append(self.load)
+		.tag('div.clearfix').gat()
+		.append(self.disk)
+		.tag('div.clearfix').gat()
+		.append(self.net)
+		.tag('div.clearfix').gat()
+	.gat()
+	.tag('div.modal-footer').gat();
+
+	self.update(host.stat);
+}
+HostDetail.prototype = {
+	show: function() {
+		var self = this;
+		$('#modal')
+		.empty()
+		.append(self.page)
+		.modal()
+		.on('hide', function() {
+			detail = null;
+		});
+		;
+	},
+	update: function(stat) {
+		var self = this;
+		var core = stat.stat.cpu.core;
+		for (var i = 0; i < core; i++) {
+			var cpu = stat.stat.cpu['cpu'+i];
+			var pie = self.cpus[i];
+			pie.update({
+				series: [{
+					color: color.rgb.warn,
+					value: cpu.user
+				},{
+					color: color.rgb.notice,
+					value: cpu.system
+				},{
+					color: color.rgb.fatal,
+					value: cpu.iowait
+				},{
+					color: color.rgb.normal,
+					value: cpu.idle
+				}],
+				label: (100-cpu.idle) + '%'
+			});
+		}	
+		for (i = 0; i < 3; i++) {
+			var load = stat.load[i];
+			load = Math.round(load*100)/100;
+			var bar = self.loads[i];
+			var loadrate = Math.min(50, Math.round(load/core*50));
+			bar.update({
+				series: [{
+					color: color.rgb.normal,
+					value: 50-loadrate
+				},{
+					color: color.rgb.warn,
+					value: loadrate
+				}],
+				label: String(load)
+			});
+		}
+		for (var name in stat.disk) {
+			var disk = stat.disk[name];
+			var td = self.disks[name];
+			if (td) {
+				td.empty()
+				.tag('span.read').text(kmgformat(disk.read.sector*512)).gat()
+				.tag('span.write').text(kmgformat(disk.write.sector*512)).gat()
+				;
+			}
+		}
+		for (var name in stat.net) {
+			var net = stat.net[name];
+			var td = self.nets[name];
+			if (td) {
+				td.empty()
+				.tag('span.receive').text(kmgformat(net.receive)).gat()
+				.tag('span.send').text(kmgformat(net.send)).gat()
+				;
+			}
+		}
+	}
+};
 
 })();
 });

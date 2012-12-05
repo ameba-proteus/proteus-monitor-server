@@ -36,6 +36,10 @@ td.name span {
 td.name span.host {
 	width: 140px;
 }
+td.name span.host a {
+	color: #369;
+	cursor: pointer;
+}
 td.name span.address {
 	width: 110px;
 }
@@ -99,3 +103,68 @@ td.process span.fail {
 	background-color: #fe615b;
 }
 
+div#modal {
+}
+div#host-detail h5 {
+	padding: 0;
+	margin: 5px 0 0 0;
+}
+div#host-detail section.cpu div.cpu-unit {
+	width: 32px;
+	float: left;
+	padding: 0 4px;
+}
+div#host-detail section.cpu div.cpu-unit span {
+	display: block;
+	text-align: center;
+	font-size: 70%;
+	height: 18px;
+}
+div#host-detail section.load div.load-unit {
+	width: 110px;
+	float: left;
+}
+div#host-detail section.load div.load-unit span {
+	text-align: center;
+	display: block;
+	font-size: 70%;
+	height: 18px;
+}
+div#host-detail section table {
+	margin-bottom: 0;
+}
+div#host-detail section.net div.net-unit,
+div#host-detail section.disk div.disk-unit {
+	width: 110px;
+	margin-right: 10px;
+	float: left;
+}
+div#host-detail section.net div.net-unit th,
+div#host-detail section.disk div.disk-unit th {
+	font-size: 80%;
+	padding: 2px;
+	text-align: center;
+}
+div#host-detail section.net div.net-unit td span,
+div#host-detail section.disk div.disk-unit td span {
+	display: block;
+	float: left;
+	text-align: right;
+	width: 45px;
+}
+div#host-detail section.net div.net-unit td span.receive,
+div#host-detail section.disk div.disk-unit td span.read {
+	color: #00a;
+}
+div#host-detail section.net div.net-unit td span.send,
+div#host-detail section.disk div.disk-unit td span.write {
+	color: #a00;
+}
+
+
+.clearfix {zoom:1;}
+.clearfix:after {
+  content: ""; 
+  display: block; 
+  clear: both;
+}
