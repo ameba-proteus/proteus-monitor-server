@@ -12,8 +12,9 @@ var express = require('express')
 , fs = require('fs')
 , manager = require('./lib/server/manager')
 ;
+var log = console.log;
 
-var program = require('commander')
+var program = require('commander');
 program.version('0.0.1')
 .option('-w, --port <n>', 'server port')
 .parse(process.argv);
@@ -27,7 +28,6 @@ var d = domain.create();
 
 d.run(function() {
 	var app = express();
-	var log = console.log;
 
 	app.configure(function(){
 		app.set('port', Number(program['web-port'] || 3333));
@@ -50,7 +50,7 @@ d.run(function() {
 	var server = http.createServer(app);
 
 	server.listen(app.get('port'), function(){
-		console.log("Express server listening on port " + app.get('port'));
+		log("Express server listening on port " + app.get('port'));
 	});
 
 	// create WebSocketServer
