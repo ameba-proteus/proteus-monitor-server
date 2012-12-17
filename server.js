@@ -30,7 +30,7 @@ d.run(function() {
 	var app = express();
 
 	app.configure(function(){
-		app.set('port', Number(program['web-port'] || 3333));
+		app.set('port', Number(program['port'] || 3333));
 		app.set('views', __dirname + '/views');
 		app.set('view engine', 'jade');
 		app.use(express.favicon());
